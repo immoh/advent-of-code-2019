@@ -22,8 +22,21 @@
     2 (recur (operate state *))
     99 (result state)))
 
-(defn part1 [input]
-  (run-program {:program (-> (parse-input input)
-                             (assoc 1 12)
-                             (assoc 2 2))
+(defn run-program-with-noun-and-verb [program noun verb]
+  (run-program {:program (-> program
+                             (assoc 1 noun)
+                             (assoc 2 verb))
                 :index 0}))
+
+(defn part1 [input]
+  (run-program-with-noun-and-verb (parse-input input) 12 2))
+
+(defn part2 [input]
+  (let [program (parse-input input)]
+    (loop [noun-verb-pairs (for [noun (range 0 100)
+                                 verb (range 0 100)]
+                             [noun verb])]
+      (let [[noun verb] (first noun-verb-pairs)]
+        (if (= 19690720 (run-program-with-noun-and-verb program noun verb))
+          (+ (* 100 noun) verb)
+          (recur (rest noun-verb-pairs)))))))
