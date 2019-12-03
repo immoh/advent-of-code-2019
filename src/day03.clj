@@ -41,3 +41,13 @@
       (intersections)
       (->> (map manhattan-distance)
            (reduce min))))
+
+(defn steps [intersection path]
+  (count (take-while (partial not= intersection) path)))
+
+(defn step-sum [paths intersection]
+  (reduce + (map (partial steps intersection) paths)))
+
+(defn part2 [input]
+  (let [paths (map path-coordinates (parse-input input))]
+    (reduce min (map (partial step-sum paths) (intersections paths)))))
