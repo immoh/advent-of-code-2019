@@ -31,15 +31,13 @@
     instructions))
 
 (defn intersections [paths]
-  (reduce clojure.set/intersection (map set paths)))
+  (disj (reduce clojure.set/intersection (map set paths)) [0 0]))
 
 (defn manhattan-distance [[x y]]
   (+ (Math/abs x) (Math/abs y)))
 
-
 (defn part1 [input]
   (-> (map path-coordinates (parse-input input))
       (intersections)
-      (disj [0 0])
       (->> (map manhattan-distance)
            (reduce min))))
