@@ -17,7 +17,7 @@
     {:program (assoc program output-index (f param1 param2))
      :index   (+ index 4)}))
 
-(defn op3 [{:keys [program index]} input]
+(defn op3 [{:keys [program index input]}]
   (let [output-index (get program (inc index))]
     {:program (assoc program output-index input)
      :index   (+ index 2)}))
@@ -46,10 +46,11 @@
     (case op
       1 (recur (op1-2 state + parameter-modes))
       2 (recur (op1-2 state * parameter-modes))
-      3 (recur (op3 state 1))
+      3 (recur (op3 state))
       4 (recur (op4 state parameter-modes))
       99 (result state))))
 
-(defn part1 [input]
-  (run-program {:program (parse-input input)
+(defn part1 [program input]
+  (run-program {:program (parse-input program)
+                :input   input
                 :index   0}))
