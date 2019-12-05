@@ -10,22 +10,25 @@
     :position (get program arg)
     :immediate arg))
 
-(defn op1-2 [{:keys [program index]} f [param1-mode param2-mode]]
+(defn op1-2 [{:keys [program index] :as state} f [param1-mode param2-mode]]
   (let [[arg1 arg2 output-index] (drop (inc index) program)
         param1 (resolve-param program param1-mode arg1)
         param2 (resolve-param program param2-mode arg2)]
-    {:program (assoc program output-index (f param1 param2))
-     :index   (+ index 4)}))
+    (merge state
+           {:program (assoc program output-index (f param1 param2))
+            :index   (+ index 4)})))
 
-(defn op3 [{:keys [program index input]}]
+(defn op3 [{:keys [program index input] :as state}]
   (let [output-index (get program (inc index))]
-    {:program (assoc program output-index input)
-     :index   (+ index 2)}))
+    (merge state
+           {:program (assoc program output-index input)
+            :index   (+ index 2)})))
 
-(defn op4 [{:keys [program index]} [param-mode]]
-  {:program program
-   :index   (+ index 2)
-   :output  (resolve-param program param-mode (get program (inc index)))})
+(defn op4 [{:keys [program index] :as state} [param-mode]]
+  (merge state
+         {:program program
+          :index   (+ index 2)
+          :output  (resolve-param program param-mode (get program (inc index)))}))
 
 (defn result [{:keys [output]}]
   output)
