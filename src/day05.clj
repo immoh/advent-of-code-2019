@@ -50,7 +50,7 @@
       4 (recur (op4 state parameter-modes))
       99 (result state))))
 
-(defn part1 [program input]
+(defn solve [program input]
   (run-program {:program (parse-input program)
                 :input   input
                 :index   0}))
