@@ -30,6 +30,22 @@
           :index   (+ index 2)
           :output  (resolve-param program param-mode (get program (inc index)))}))
 
+(defn op5-6 [{:keys [program index] :as state} pred [param1-mode param2-mode]]
+  (merge state
+         {:index (if (pred (resolve-param program param1-mode (get program (inc index))))
+                   (resolve-param program param2-mode (get program (+ index 2)))
+                   (+ index 3))}))
+
+(defn op7-8 [{:keys [program index] :as state} pred [param1-mode param2-mode]]
+  (merge state
+         {:program (assoc program
+                     (get program (+ index 3))
+                     (if (pred (resolve-param program param1-mode (get program (inc index)))
+                               (resolve-param program param2-mode (get program (+ index 2))))
+                       1
+                       0))
+          :index  (+ index 4)}))
+
 (defn result [{:keys [output]}]
   output)
 
@@ -51,6 +67,10 @@
       2 (recur (op1-2 state * parameter-modes))
       3 (recur (op3 state))
       4 (recur (op4 state parameter-modes))
+      5 (recur (op5-6 state (complement zero?) parameter-modes))
+      6 (recur (op5-6 state zero? parameter-modes))
+      7 (recur (op7-8 state < parameter-modes))
+      8 (recur (op7-8 state = parameter-modes))
       99 (result state))))
 
 (defn solve [program input]
