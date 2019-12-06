@@ -19,3 +19,12 @@
 
 (defn part1 [input]
   (reduce + (map (comp count rest) (find-all-paths (into {} (parse-input input))))))
+
+(defn part2 [input]
+  (let [orbit-relations (into {} (parse-input input))
+        ]
+    (->> (concat (rest (find-path orbit-relations "YOU"))
+                 (rest (find-path orbit-relations "SAN")))
+         (frequencies)
+         (filter #(= 1 (val %)))
+         (count))))
