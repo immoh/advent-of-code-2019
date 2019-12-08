@@ -23,7 +23,7 @@
     (merge state
            {:program (assoc program output-index (first inputs))
             :index   (+ index 2)
-            :inputs  (rest inputs)})))
+            :inputs  (vec (rest inputs))})))
 
 (defn op4 [{:keys [program index] :as state} [param-mode]]
   (merge state
@@ -94,3 +94,42 @@
   (reduce max
           (map (partial run-amplifiers (parse-input input))
                (permutations #{0 1 2 3 4}))))
+
+(defn run-program* [state]
+  (let [{:keys [op parameter-modes]} (parse-instruction state)]
+    (case op
+      1 (recur (op1-2 state + parameter-modes))
+      2 (recur (op1-2 state * parameter-modes))
+      3 (recur (op3 state))
+      4 {:state (op4 state parameter-modes)}
+      5 (recur (op5-6 state (complement zero?) parameter-modes))
+      6 (recur (op5-6 state zero? parameter-modes))
+      7 (recur (op7-8 state < parameter-modes))
+      8 (recur (op7-8 state = parameter-modes))
+      99 {:result (result state)})))
+
+
+(defn run-looped-amplifiers [program phase-settings]
+  (loop [amplifiers (mapv (fn [phase-setting]
+                            {:program program
+                             :inputs  [phase-setting]
+                             :index   0})
+                          phase-settings)
+         index 0
+         output 0
+         last-amplifier-output nil]
+    (let [{:keys [state result] :as ret} (run-program* (update (get amplifiers index) :inputs conj output))]
+      (cond
+        result last-amplifier-output
+        state (recur (assoc amplifiers index state)
+                     (mod (inc index) (count amplifiers))
+                     (:output state)
+                     (if (= index (dec (count amplifiers)))
+                       (:output state)
+                       last-amplifier-output))
+        :else (throw (ex-info "fail" (assoc ret :index index)))))))
+
+(defn part2 [input]
+  (reduce max
+          (map (partial run-looped-amplifiers (parse-input input))
+               (permutations #{5 6 7 8 9}))))
