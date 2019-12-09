@@ -100,3 +100,9 @@
                 :relative-base 0
                 :outputs       []}))
 
+(defn part2 [input]
+  (run-program {:program       (parse-input input)
+                :inputs        [2]
+                :index         0
+                :relative-base 0
+                :outputs       []}))
