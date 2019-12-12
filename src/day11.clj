@@ -117,18 +117,19 @@
       return-value
       (run-program state))))
 
-(defn painted-tiles [intcode-program]
+(defn run-robot [intcode-program white-tiles]
   (loop [robot-position [0 0]
          robot-direction [0 -1]
          intcode-state intcode-program
-         white-tiles #{}
+         white-tiles white-tiles
          painted-tiles #{}]
     (let [{:keys [result state]} (run-program-twice (assoc intcode-state
                                                       :inputs [(get-tile-color white-tiles robot-position)]
                                                       :outputs []))]
 
       (if result
-        painted-tiles
+        {:white-tiles white-tiles
+         :painted-tiles painted-tiles}
         (let [[color turn-direction] (get state :outputs)
               new-robot-direction (turn robot-direction turn-direction)
               new-robot-position (move robot-position new-robot-direction)]
@@ -141,8 +142,24 @@
                  (conj painted-tiles robot-position)))))))
 
 (defn part1 [input]
-  (count (painted-tiles {:program       (parse-input input)
-                         :inputs        []
-                         :index         0
-                         :relative-base 0
-                         :outputs       []})))
+  (count (:painted-tiles (run-robot {:program       (parse-input input)
+                                     :inputs        []
+                                     :index         0
+                                     :relative-base 0
+                                     :outputs       []}
+                                    #{}))))
+
+(defn visualize [white-tiles]
+  (doseq [y (range (reduce min (map second white-tiles))
+                   (inc (reduce max (map second white-tiles))))]
+    (println (reduce str (for [x (range (reduce min (map first white-tiles))
+                                        (inc (reduce max (map first white-tiles))))]
+                           (if (contains? white-tiles [x y]) "#" " "))))))
+
+(defn part2 [input]
+  (visualize (:white-tiles (run-robot {:program       (parse-input input)
+                                       :inputs        []
+                                       :index         0
+                                       :relative-base 0
+                                       :outputs       []}
+                                      #{[0 0]}))))
