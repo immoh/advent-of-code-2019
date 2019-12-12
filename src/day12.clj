@@ -51,3 +51,31 @@
 
 (defn part1 [input steps]
   (system-total-energy (apply-time-steps (parse-input input) steps)))
+
+(defn find-cycle-length [x0 iter-fn val-fn]
+  (loop [x x0
+         seen #{(val-fn x0)}
+         i 1]
+    (let [x' (iter-fn x)
+          v' (val-fn x')]
+      (if (seen v')
+        i
+        (recur x' (conj seen v') (inc i))))))
+
+(defn get-nth-coordinates [n moons]
+  (concat (map (comp #(nth % n) :position) moons)
+          (map (comp #(nth % n) :velocity) moons)))
+
+(defn gcd [a b]
+  (if (zero? b)
+    a
+    (recur b (mod a b))))
+
+(defn lcm [a b]
+  (/ (* a b) (gcd a b)))
+
+(defn part2 [input]
+  (let [moons (parse-input input)]
+    (reduce lcm (map
+                  #(find-cycle-length moons apply-time-step (partial get-nth-coordinates %))
+                  [0 1 2]))))
