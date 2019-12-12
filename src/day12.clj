@@ -51,3 +51,18 @@
 
 (defn part1 [input steps]
   (system-total-energy (apply-time-steps (parse-input input) steps)))
+
+(defn part2 [input]
+  (loop [moons (parse-input input)
+         seen #{}
+         i 1]
+    (prn (first (:position (first moons))))
+    (when (< i 100)
+      (recur (apply-time-step moons) seen (inc i)))
+
+    #_(let [new-moons (apply-time-step moons)]
+      (if (seen (first (:position (first moons))))
+        i
+        (recur new-moons (conj seen (first (:position (first moons)))) (inc i))))))
+
+
