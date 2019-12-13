@@ -79,49 +79,31 @@
                        (mode-kw (nth modes 1 \0))
                        (mode-kw (nth modes 2 \0))]}))
 
-(defn run-program [state]
-  (let [{:keys [op parameter-modes]} (parse-instruction state)]
-    (case op
-      1 (recur (op1-2 state + parameter-modes))
-      2 (recur (op1-2 state * parameter-modes))
-      3 (recur (op3 state parameter-modes))
-      4 {:state (op4 state parameter-modes)}
-      5 (recur (op5-6 state (complement zero?) parameter-modes))
-      6 (recur (op5-6 state zero? parameter-modes))
-      7 (recur (op7-8 state < parameter-modes))
-      8 (recur (op7-8 state = parameter-modes))
-      9 (recur (op9 state parameter-modes))
-      99 {:result (result state)})))
+(defn run-program
+  ([state]
+    (run-program state nil))
+  ([state input]
+   (let [{:keys [op parameter-modes]} (parse-instruction state)]
+     (case op
+       1 (recur (op1-2 state + parameter-modes) input)
+       2 (recur (op1-2 state * parameter-modes) input)
+       3 (recur (op3 (assoc state :inputs [input]) parameter-modes) input)
+       4 {:state (op4 state parameter-modes)}
+       5 (recur (op5-6 state (complement zero?) parameter-modes) input)
+       6 (recur (op5-6 state zero? parameter-modes) input)
+       7 (recur (op7-8 state < parameter-modes) input)
+       8 (recur (op7-8 state = parameter-modes) input)
+       9 (recur (op9 state parameter-modes) input)
+       99 {:result (result state)}))))
 
-(defn get-tile-color [white-tile? robot-position]
-  (if (white-tile? robot-position) 1 0))
-
-(def directions-map {[0 -1] {0 [-1 0]
-                             1 [1 0]}
-                     [1 0]  {0 [0 -1]
-                             1 [0 1]}
-                     [0 1]  {0 [1 0]
-                             1 [-1 0]}
-                     [-1 0] {0 [0 1]
-                             1 [0 -1]}})
-
-(defn turn [current-direction turn-direction]
-  (get-in directions-map [current-direction turn-direction]))
-
-(defn move [position direction]
-  (mapv + position direction))
-
-(defn run-program-twice [intcode-state]
-  (let [{:keys [state result] :as return-value} (run-program intcode-state)]
-    (if result
-      return-value
-      (run-program state))))
-
-(defn run-multiple-times [intcode-state n]
-  (let [{:keys [state result] :as return-value} (run-program intcode-state)]
-    (if (or result (= n 1))
-      return-value
-      (recur state (dec n)))))
+(defn run-multiple-times
+  ([intcode-state n]
+    (run-multiple-times intcode-state n nil))
+  ([intcode-state n input]
+   (let [{:keys [state result] :as return-value} (run-program intcode-state input)]
+     (if (or result (= n 1))
+       return-value
+       (recur state (dec n) input)))))
 
 (defn run-arcade [intcode-program]
   (loop [world {}
@@ -136,9 +118,62 @@
 (defn block-tiles [world]
   (count (filter #(= % 2) (vals world))))
 
+(defn- high-score-instruction? [x y]
+  (= [x y] [-1 0]))
+
+(defn tile [n]
+  (case n
+    1 "#"
+    2 "B"
+    3 "-"
+    4 "o"
+    " "))
+
+;;; [0 0] [44 25]
+(defn visualize [world]
+  (doseq [y (range 26)]
+    (println (reduce str (map #(tile (get world [% y])) (range 0 45))))))
+
+(defn ball-position [world]
+  (ffirst (filter #(= 4 (val %)) world)))
+
+(defn paddle-position [world]
+  (ffirst (filter #(= 3 (val %)) world)))
+
+(defn joystick-position [world]
+  (prn :blocks (block-tiles world) :ball (ball-position world) :paddle (paddle-position world))
+  (let [[ball-x ball-y :as ball] (ball-position world)
+        [paddle-x paddle-y :as paddle] (paddle-position world)]
+    (if (and (pos? (block-tiles world)) ball paddle)
+      (if (and (> paddle-y ball-y)
+               (> (Math/abs (- ball-x paddle-x)) 1))
+        (if (> ball-x paddle-x) 1 -1)
+        0)
+      0)))
+
+(defn run-arcade2 [intcode-program]
+  (loop [world {}
+         high-score 0
+         intcode-state intcode-program]
+    #_(visualize world)
+    #_(println "...........")
+    (let [{:keys [result state]} (run-multiple-times intcode-state 3 (joystick-position world))]
+      (if result
+        (if (zero? (block-tiles world)) high-score ::fail)
+        (let [[x y z] (get state :outputs)]
+          (recur (if-not (high-score-instruction? x y) (assoc world [x y] z) world)
+                 (if (high-score-instruction? x y) z high-score)
+                 (assoc state :outputs [])))))))
+
 (defn part1 [input]
   (block-tiles (run-arcade {:program       (parse-input input)
                             :inputs        []
                             :index         0
                             :relative-base 0
                             :outputs       []})))
+
+(defn part2 [input]
+  (run-arcade2 {:program       (assoc (parse-input input) 0 2)
+                :index         0
+                :relative-base 0
+                :outputs       []}))
