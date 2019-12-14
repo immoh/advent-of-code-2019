@@ -43,8 +43,22 @@
 (defn ore-rule? [rule]
   (= ["ORE"] (keys (:inputs rule))))
 
-(defn part1 [input]
-  (let [{ore-rules true non-ore-rules false} (group-by ore-rule? (parse-input input))]
-    (get (->> (resolve-requirements (index-by-output-chemicals non-ore-rules) {"FUEL" 1})
+(defn required-ores [rules fuel]
+  (let [{ore-rules true non-ore-rules false} (group-by ore-rule? rules)]
+    (get (->> (resolve-requirements (index-by-output-chemicals non-ore-rules) {"FUEL" fuel})
               (resolve-requirements (index-by-output-chemicals ore-rules)))
          "ORE")))
+
+(defn part1 [input]
+  (required-ores (parse-input input) 1))
+
+(defn binary-search [a b t f]
+  (let [x (long (Math/floor (/ (+ a b) 2)))]
+    (if (= x a)
+      a
+      (if (<= (f x) t)
+        (recur x b t f)
+        (recur a x t f)))))
+
+(defn part2 [input]
+  (binary-search 1 1000000000000 1000000000000 (partial required-ores (parse-input input))))
