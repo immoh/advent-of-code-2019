@@ -143,3 +143,39 @@
                        :index         0
                        :relative-base 0
                        :outputs       []}))
+
+(defn map-complete-world [intcode-program]
+  (loop [world {[0 0] {:cell     1
+                       :intcode  intcode-program
+                       :distance 0}}]
+
+    (if-let [[position {:keys [intcode distance]}] (find-unvisited-with-smallest-distance world)]
+      (recur (merge (assoc-in world [position :visited?] true)
+                    (neighbors world position intcode (inc distance))))
+      world)))
+
+(defn open? [[_ {:keys [cell]}]]
+  (= cell 1))
+
+(defn oxygen? [[_ {:keys [cell]}]]
+  (= cell 2))
+
+(defn switch-to-oxygen [world position]
+  (update-in world [position :cell] (fn [cell] (if (= cell 1) 2 cell))))
+
+(defn spread-oxygen-to-neighbors [world oxygen]
+  (reduce switch-to-oxygen world (map (partial mapv + oxygen) directions)))
+
+(defn spread-oxygen [world oxygens]
+  (reduce spread-oxygen-to-neighbors world (keys oxygens)))
+
+(defn part2 [input]
+  (loop [world (map-complete-world {:program       (parse-input input)
+                                    :inputs        []
+                                    :index         0
+                                    :relative-base 0
+                                    :outputs       []})
+         i 0]
+    (if (zero? (count (filter open? world)))
+      i
+      (recur (spread-oxygen world (filter oxygen? world)) (inc i)))))
