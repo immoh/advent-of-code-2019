@@ -22,3 +22,18 @@
 
 (defn part1 [input]
   (reduce str (take 8 (nth-phase (parse-input input) 100))))
+
+(defn next-phase2 [s]
+  (mapv last-digit (reverse (reductions + (reverse s)))))
+
+(defn nth-phase2 [s offset iterations]
+  (nth (iterate next-phase2 (drop offset s)) iterations))
+
+(defn parse-offset [input]
+  (Integer/parseInt (subs input 0 7)))
+
+(defn repeat-seq [n s]
+  (take (* n (count s)) (cycle s)))
+
+(defn part2 [input]
+  (reduce str (take 8 (nth-phase2 (repeat-seq 10000 (parse-input input)) (parse-offset input) 100))))
