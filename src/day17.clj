@@ -125,10 +125,10 @@
 
 (defn part1 [input]
   (->> (run-program {:program       (parse-input input)
-                         :inputs        []
-                         :index         0
-                         :relative-base 0
-                         :outputs       []})
+                     :inputs        []
+                     :index         0
+                     :relative-base 0
+                     :outputs       []})
        (get-scaffolds)
        (find-intersections)
        (map alignment-parameter)
