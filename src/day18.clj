@@ -1,5 +1,6 @@
 (ns day18
   (:require
+    [clojure.set]
     [clojure.string]))
 
 (defn parse-line [y line]
@@ -14,8 +15,8 @@
 (defn lock-cell? [cell-type]
   (<= (int \A) (int cell-type) (int \Z)))
 
-(defn key-count [world]
-  (count (filter key-cell? (vals world))))
+(defn world-keys [world]
+  (set (filter key-cell? (vals world))))
 
 (defn find-start [world]
   (key (first (filter #(= \@ (val %)) world))))
@@ -42,19 +43,54 @@
   (->> (keep (partial neighbor world position collected-keys) [[1 0] [-1 0] [0 1] [0 -1]])
        (remove visited)))
 
-(defn find-shortest-path [world]
-  (let [total-key-count (key-count world)]
-    (loop [unvisited {{:position       (find-start world)
-                       :collected-keys #{}} 0}
-           visited #{}]
-      (let [[{:keys [position collected-keys] :as node} distance] (select-next unvisited)]
-        (if (= (count collected-keys) total-key-count)
-          distance
-          (recur (merge-with min
-                             (dissoc unvisited node)
-                             (zipmap (neighbors world visited position collected-keys)
-                                     (repeat (inc distance))))
-                 (conj visited node)))))))
+(defn find-shortest-path [world start total-key-count]
+  (loop [unvisited {start 0}
+         visited #{}]
+    (let [[{:keys [position collected-keys] :as node} distance] (select-next unvisited)]
+      (if (= (count collected-keys) total-key-count)
+        distance
+        (recur (merge-with min
+                           (dissoc unvisited node)
+                           (zipmap (neighbors world visited position collected-keys)
+                                   (repeat (inc distance))))
+               (conj visited node))))))
 
 (defn part1 [input]
-  (find-shortest-path (parse-input input)))
+  (let [world (parse-input input)]
+    (find-shortest-path world
+                        {:position       (find-start world)
+                         :collected-keys #{}}
+                        (count (world-keys world)))))
+
+(defn modify-to-4-robots [world [x y]]
+  (assoc world
+    ;; -1 row
+    [(dec x) (dec y)] \@
+    [x (dec y)] \#
+    [(inc x) (dec y)] \@
+    ;; 0 row
+    [(dec x) y] \#
+    [x y] \#
+    [(inc x) y] \#
+    ;; +1 row
+    [(dec x) (inc y)] \@
+    [x (inc y)] \#
+    [(inc x) (inc y)] \@))
+
+(defn split-world [world [cx cy]]
+  [(into {} (filter (fn [[[x y] _]] (and (<= x cx) (<= y cy))) world))
+   (into {} (filter (fn [[[x y] _]] (and (>= x cx) (<= y cy))) world))
+   (into {} (filter (fn [[[x y] _]] (and (<= x cx) (>= y cy))) world))
+   (into {} (filter (fn [[[x y] _]] (and (>= x cx) (>= y cy))) world))])
+
+(defn part2 [input]
+  (let [world (parse-input input)
+        center (find-start world)
+        modified-world (modify-to-4-robots world center)
+        all-keys (world-keys modified-world)]
+    (reduce + (map (fn [robot-world]
+                     (find-shortest-path robot-world
+                                         {:position       (find-start robot-world)
+                                          :collected-keys (clojure.set/difference all-keys (world-keys robot-world))}
+                                         (count all-keys)))
+                   (split-world modified-world center)))))
