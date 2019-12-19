@@ -94,14 +94,48 @@
       99 (result state))))
 
 (defn get-drone-status [program x y]
-  (run-program {:program       program
-                :inputs        [x y]
-                :index         0
-                :relative-base 0
-                :outputs       []}))
+  (first (run-program {:program       program
+                       :inputs        [x y]
+                       :index         0
+                       :relative-base 0
+                       :outputs       []})))
 
 (defn part1 [input]
   (count (filter #{1} (let [program (parse-input input)]
                         (for [x (range 50)
                               y (range 50)]
-                          (first (get-drone-status program x y)))))))
+                          (get-drone-status program x y))))))
+
+(defn square-start [last-100]
+  (let [[first-start first-end] (:x (first last-100))
+        [last-start last-end] (:x (last last-100))]
+    (when (and (> (inc (- first-end first-start)) 100)
+               (<= first-end last-end)
+               (>= (inc (- first-end 100)) last-start))
+      [(inc (- first-end 100)) (:y (first last-100))])))
+
+(defn next-row [program {[x-start x-end] :x y :y}]
+  {:x [(if (= (get-drone-status program x-start (inc y)) 1)
+         x-start
+         (inc x-start))
+       (if (= (get-drone-status program (inc x-end) (inc y)) 1)
+         (inc x-end)
+         x-end)]
+   :y (inc y)})
+
+(defn next-iteration [program last-100]
+  (conj (vec (if (= (count last-100) 100)
+               (rest last-100)
+               last-100))
+        (next-row program (last last-100))))
+
+(defn get-first-row [program]
+  (let [x-start (first (drop-while #(zero? (get-drone-status program % 100)) (range)))
+        x-end (dec (first (drop-while #(= 1 (get-drone-status program % 100)) (iterate inc x-start))))]
+    {:x [x-start x-end] :y 100}))
+
+
+(defn part2 [input]
+  (let [program (parse-input input)
+        [x y] (first (keep square-start (iterate (partial next-iteration program) [(get-first-row program)])))]
+    (+ (* 10000 x) y)))
