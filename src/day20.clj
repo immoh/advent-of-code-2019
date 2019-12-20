@@ -68,3 +68,56 @@
 
 (defn part1 [input]
   (find-shortest-path (construct-world (parse-input input))))
+
+
+(defn select-next-tile2 [unvisited]
+  (reduce (fn [x y] (if (< (val x) (val y)) x y)) unvisited))
+
+(defn port-type [tiles [x y]]
+  (if (and (some (fn [[x2 _]] (< x2 x)) tiles)
+           (some (fn [[x2 _]] (> x2 x)) tiles)
+           (some (fn [[_ y2]] (< y2 y)) tiles)
+           (some (fn [[_ y2]] (> y2 y)) tiles))
+    :inner
+    :outer))
+
+(defn ports-with-types [all-tiles ports]
+  (into {} (keep (fn [[_ tiles]]
+                   (let [[tile1 tile2] (vec tiles)]
+                     (when tile2
+                       (let [[type1 type2] (map (partial port-type all-tiles) [tile1 tile2])]
+                         {tile1 {:to tile2 :type type1}
+                          tile2 {:to tile1 :type type2}}))))
+                 ports)))
+
+(defn construct-world2 [maze]
+  (let [ports (find-ports maze)
+        tiles (set (keys (filter tile? maze)))]
+    {:start {:xy (first (get ports "AA")) :level 0}
+     :end   {:xy (first (get ports "ZZ")) :level 0}
+     :tiles  tiles
+     :ports (ports-with-types tiles ports)}))
+
+(defn neighbors2 [tiles ports visited {:keys [xy level]}]
+  (remove visited (concat (filter (comp tiles :xy) (map (fn [direction-xy]
+                                                          {:xy    (mapv + xy direction-xy)
+                                                           :level level})
+                                                        directions))
+                          (when-let [{:keys [to type]} (get ports xy)]
+                            (when (or (not (zero? level)) (= :inner type))
+                              [{:xy to :level (if (= :inner type) (inc level) (dec level))}])))))
+
+(defn find-shortest-path2 [{:keys [start end tiles ports]}]
+  (loop [unvisited {start 0}
+         visited #{}]
+    (let [[current-tile distance] (select-next-tile2 unvisited)]
+      (if (= current-tile end)
+        distance
+        (recur (merge-with min
+                           (dissoc unvisited current-tile)
+                           (zipmap (neighbors2 tiles ports visited current-tile)
+                                   (repeat (inc distance))))
+               (conj visited current-tile))))))
+
+(defn part2 [input]
+  (find-shortest-path2 (construct-world2 (parse-input input))))
