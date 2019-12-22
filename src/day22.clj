@@ -2,21 +2,28 @@
   (:require
     [clojure.string]))
 
-(defmulti apply-technique (fn [cmd & _] cmd))
+(defmulti apply-technique (fn [_ _ cmd _] cmd))
 
-(defmethod apply-technique "deal with increment" [_ deck increment]
-  (map
-    (partial nth deck)
-    (take (count deck) (iterate #(mod (- % increment) (count deck)) 0))))
+(defmethod apply-technique "deal with increment" [deck-size card-position _ increment]
+  (mod (*' card-position increment) deck-size))
 
-(defmethod apply-technique "deal into new stack" [_ deck _]
-  (reverse deck))
+;; 0 1 (2) 3 4 5 6 7 8 9    (position 2)
+;; 9 8 7 6 5 4 3 (2) 1 0    (position 7)
+(defmethod apply-technique "deal into new stack" [deck-size card-position _ _]
+  (-' deck-size card-position 1))
 
-(defmethod apply-technique "cut" [_ deck offset]
+(defmethod apply-technique "cut" [deck-size card-position cmd offset]
   (cond
-    (zero? offset) deck
-    (pos? offset) (concat (drop offset deck) (take offset deck))
-    (neg? offset) (concat (take-last (- offset) deck) (drop-last (- offset) deck))))
+    (zero? offset) card-position
+
+    (pos? offset) (if (<= card-position (dec offset))
+                    ;; 0 1 (2) 3 4 5 6 7 8 9     cut 4
+                    ;; 4 5 6 7 8 9 0 1 (2) 3     position 8 = (+ (- 10 4) 2)
+                    (+' (-' deck-size offset) card-position)
+                    ;; 0 1 (2) 3 4 5 6 7 8 9     cut 2
+                    ;; (2) 3 4 5 6 7 8 9 0 1     position 0 = 2 - 2
+                    (-' card-position offset))
+    (neg? offset) (recur deck-size card-position cmd (+ deck-size offset))))
 
 (defn maybe-parse-int [s]
   (try
@@ -32,15 +39,50 @@
        :arg arg}
       {:cmd line})))
 
-(defn apply-technique* [deck line]
-  (prn line)
+(defn apply-technique* [{:keys [deck-size card-position]} line]
   (let [{:keys [cmd arg]} (parse-line line)]
-    (apply-technique cmd deck arg)))
+    {:deck-size     deck-size
+     :card-position (apply-technique deck-size card-position cmd arg)}))
 
-(defn apply-techniques [deck cmds]
-  (reduce apply-technique* deck cmds))
+(defn get-card-position [deck-size card-position lines]
+  (:card-position (reduce apply-technique* {:deck-size deck-size :card-position card-position} lines)))
 
-(defn part1 [card-count input]
-  (get (zipmap (apply-techniques (range card-count) (clojure.string/split-lines input))
-               (range))
-       2019))
+(defn part1 [input]
+  (get-card-position 10007 2019 (clojure.string/split-lines input)))
+
+(defn find-cycle-length [f start]
+  (loop [v start
+         i 1]
+    (let [v' (f v)]
+      (if (= v' start)
+        i
+        (recur v' (inc i)))))
+
+
+
+
+  )
+
+(defn part2 [input]
+  (find-cycle-length #(get-card-position 119315717514047 % (clojure.string/split-lines input))
+                     2020))
+
+
+
+;0 1 2 3 4 5 6 7 8 9
+;
+;deal with increment 7
+;
+;0 3 6 9 2 5 8 1 4 7
+;
+;deal with increment 9
+;
+;0 1 2 3 4 5 6 7 8 9
+;0 3 6 9 2 5 8 1 4 7
+;
+;0
+;
+;cut -2
+;
+;4 7 0 3 6 9 2 5 8 1
+;
