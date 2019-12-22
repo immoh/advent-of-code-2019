@@ -4,22 +4,10 @@
 
 (defmulti apply-technique (fn [cmd & _] cmd))
 
-(defn get-next-free [deck-size indices n]
-  (let [n' (mod n deck-size)]
-    (if (get indices n')
-      (recur deck-size indices (inc n'))
-      n')))
-
-(defn deal-with-increment [deck increment]
-  (:indices (reduce (fn [{:keys [indices current]} n]
-                      (let [free-index (get-next-free (count deck) indices (+ current increment))]
-                        {:indices (assoc indices free-index n)
-                         :current free-index}))
-                    {:indices {0 (first deck)} :current 0}
-                    (rest deck))))
-
 (defmethod apply-technique "deal with increment" [_ deck increment]
-  (map val (sort-by key (deal-with-increment deck increment))))
+  (map
+    (partial nth deck)
+    (take (count deck) (iterate #(mod (- % increment) (count deck)) 0))))
 
 (defmethod apply-technique "deal into new stack" [_ deck _]
   (reverse deck))
