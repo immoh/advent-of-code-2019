@@ -126,3 +126,45 @@
                (vec (rest queue))
                nat-buffer
                (if (seq queue) 0 (inc i)))))))
+
+;; 15029 too high
+(defn part2 [input]
+  (loop [computers (into {} (map (fn [i]
+                                   {i (:state (run-program {:program       (parse-input input)
+                                                            :inputs        [i]
+                                                            :index         0
+                                                            :relative-base 0
+                                                            :outputs       []}))})
+                                 (range 50)))
+         queue []
+         nat-buffer nil
+         nat-send-ys #{}
+         i 0]
+    (if (= i 4000)
+      (let [y (second nat-buffer)]
+        (if (nat-send-ys y)
+          y
+          (recur computers
+                 [[0 nat-buffer]]
+                 nil
+                 (conj nat-send-ys y)
+                 0)))
+      (let [[computer-id xy] (or (first queue) [(mod i 50) [-1]])
+            {:keys [outputs] :as new-state} (run-program-cycle (update (get computers computer-id) :inputs into xy))]
+        (if-let [[address x y] (seq outputs)]
+          (if (= address 255)
+            (recur (assoc computers computer-id (assoc new-state :outputs []))
+                   (vec (rest queue))
+                   [x y]
+                   nat-send-ys
+                   0)
+            (recur (assoc computers computer-id (assoc new-state :outputs []))
+                   (conj (vec (rest queue)) [address [x y]])
+                   nat-buffer
+                   nat-send-ys
+                   0))
+          (recur (assoc computers computer-id new-state)
+                 (vec (rest queue))
+                 nat-buffer
+                 nat-send-ys
+                 (if (seq queue) 0 (inc i))))))))
