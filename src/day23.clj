@@ -95,34 +95,34 @@
       9 (recur (op9 state parameter-modes))
       99 {:result (result state)})))
 
-(defn dequeue [queues n]
-  (update queues n (fn [queue] (vec (rest queue)))))
 
-(defn enqueue [queues n p]
-  (update queues n (fn [queue] (vec (conj queue p)))))
+(defn run-program-cycle [computer]
+  (let [{:keys [outputs] :as state} (:state (run-program computer))]
+    (if (< 0 (count outputs) 3)
+      (recur state)
+      state)))
 
-(defn run-computer-network [program]
+(defn part1 [input]
   (loop [computers (into {} (map (fn [i]
-                                   {i (:state (run-program {:program       program
+                                   {i (:state (run-program {:program       (parse-input input)
                                                             :inputs        [i]
                                                             :index         0
                                                             :relative-base 0
                                                             :outputs       []}))})
                                  (range 50)))
-         queues {}
+         queue []
+         nat-buffer nil
          i 0]
-    (let [msg (or (first (get queues i)) -1)
-          {:keys [outputs] :as new-state} (:state (run-program (update (get computers i) :inputs (fn [inputs] (vec (conj inputs msg))))))]
-      (if (= (count outputs) 3)
-        (let [[address x y] outputs]
-          (if (= address 255)
-            y
-            (recur (assoc computers i (assoc new-state :outputs []))
-                   (-> queues (dequeue i) (enqueue address x) (enqueue address y))
-                   (mod (inc i) 50))))
-        (recur (assoc computers i new-state)
-               (-> queues (dequeue i))
-               (mod (inc i) 50))))))
-
-(defn part1 [input]
-  (run-computer-network (parse-input input)))
+    (let [[computer-id xy] (or (first queue) [(mod i 50) [-1]])
+          {:keys [outputs] :as new-state} (run-program-cycle (update (get computers computer-id) :inputs into xy))]
+      (if-let [[address x y] (seq outputs)]
+        (if (= address 255)
+          y
+          (recur (assoc computers computer-id (assoc new-state :outputs []))
+                 (conj (vec (rest queue)) [address [x y]])
+                 nat-buffer
+                 0))
+        (recur (assoc computers computer-id new-state)
+               (vec (rest queue))
+               nat-buffer
+               (if (seq queue) 0 (inc i)))))))
