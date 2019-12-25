@@ -50,39 +50,18 @@
 (defn part1 [input]
   (get-card-position 10007 2019 (clojure.string/split-lines input)))
 
-(defn find-cycle-length [f start]
-  (loop [v start
-         i 1]
-    (let [v' (f v)]
-      (if (= v' start)
-        i
-        (recur v' (inc i)))))
+(defmulti apply-technique2 (fn [_ _ cmd _] cmd))
 
+(defmethod apply-technique "deal into new stack" [deck-size card-position _ _]
+  (-' deck-size card-position 1))
 
+(defn apply-technique2* [{:keys [deck-size position card]} line]
+  (let [{:keys [cmd arg]} (parse-line line)]
+    {:deck-size     deck-size
+     :card-position (apply-technique2 deck-size card-position cmd arg)}))
 
-
-  )
+(defn get-card-in-position [deck-size position lines]
+  (:card (reduce apply-technique2* {:deck-size deck-size :position position :card 2020})))
 
 (defn part2 [input]
-  (find-cycle-length #(get-card-position 119315717514047 % (clojure.string/split-lines input))
-                     2020))
-
-
-
-;0 1 2 3 4 5 6 7 8 9
-;
-;deal with increment 7
-;
-;0 3 6 9 2 5 8 1 4 7
-;
-;deal with increment 9
-;
-;0 1 2 3 4 5 6 7 8 9
-;0 3 6 9 2 5 8 1 4 7
-;
-;0
-;
-;cut -2
-;
-;4 7 0 3 6 9 2 5 8 1
-;
+  (get-card-in-position 101741582076661 2020 (clojure.string/split-lines input)))
